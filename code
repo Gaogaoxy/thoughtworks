@@ -1,1 +1,89 @@
 
+'''
+Created on 2017年10月16日
+
+@author: miss.gao
+'''
+import datetime
+
+txt=open('input1.txt')
+
+lines= txt.readlines()
+# for line in lines:
+#     print(line.strip())
+now=lines[0].strip().split(':')[1][1:]
+now=datetime.datetime.strptime(now, "%Y/%m/%d")
+#print(now)
+car_dict=dict()
+for line in lines[1:]:
+    No,buydate,brand,kilo,fixed=line.strip().split('|')#车牌，购买日期，牌子，行驶里程，是否大修
+    bf,gonnabf,dq,djl=False,False,False,False #报废，即将报废，定期保养，定里程保养 的标志符
+    djl=((10000-int(kilo)%10000)<=500) or int(kilo)%10000==0 #判断里程数是否差500公里
+    buydate=datetime.datetime.strptime(buydate, "%Y/%m/%d") #处理时间格式
+    if not car_dict.__contains__(brand):  #将每个牌子的汽车按照是否定期／定里程／即将报废 保养 存储车牌号
+        car_dict[brand]=[[],[],[]]
+    if fixed=='T':
+        bfdate=buydate+datetime.timedelta(days=365*3)
+        if now-buydate>=datetime.timedelta(days=365*3): #判断车辆大修并且到三年则报废
+            bf=True
+        elif (bfdate.year-now.year)*12+(bfdate.month-now.month)<=1:#判断车辆即将报废
+            gonnabf=True
+        if bf==True:
+            continue
+        dq=((now.year-buydate.year)*12+(now.month-buydate.month))%3>=2
+    else:
+        bfdate=buydate+datetime.timedelta(days=365*6) #没有大修过的车辆报废年限为6年
+        if now-buydate>=datetime.timedelta(days=365*6):
+            bf=True
+        elif (bfdate.year-now.year)*12+(bfdate.month-now.month)<=1:
+            gonnabf=True
+        if bf==True:
+            continue
+        if now.year-buydate.year>=3: #三年以上车辆6个月保养一次
+            dq=((now.year-buydate.year)*12+(now.month-buydate.month))%6>=5 or ((now-buydate).days%180<30 and (now-buydate).days%180>=0)
+        else:  #三年以下车辆12月保养一次
+            dq=((now.year-buydate.year)*12+(now.month-buydate.month))%12>=11 or ((now-buydate).days%365<30 and (now-buydate).days%365>=0)
+            
+    if gonnabf:
+        car_dict[brand][2].append(No)
+    elif djl:
+        car_dict[brand][1].append(No)
+    elif dq:
+        car_dict[brand][0].append(No)
+        
+#print(car_dict)
+car_dict=dict(sorted(car_dict.items(),key=lambda x:x[0])) #按照car_dict的key值排序，即按照车牌子排序
+#print(car_dict)
+Time_related=''
+Distance_related=''
+Write_off=''
+#判断满足要求的输出数据
+for k in car_dict.keys():
+    a,b,c=car_dict[k]
+    if len(a)>0:
+        Time_related+=k+': '+str(len(a))+' ('
+        for item in a:
+            Time_related+=item+','
+        Time_related=Time_related[:-1]
+        Time_related+=')\n'
+    if len(b)>0:
+        Distance_related+=k+': '+str(len(b))+' ('
+        for item in b:
+            Distance_related+=item+','
+        Distance_related=Distance_related[:-1]
+        Distance_related+=')\n'
+    if len(c)>0:
+        Write_off+=k+': '+str(len(c))+' ('
+        for item in c:
+            Write_off+=item+','
+        Write_off=Write_off[:-1]
+        Write_off+=')\n'
+    
+print ('# Reminder')
+print ('==================')
+print ('* Time-related maintenance coming soon...')
+print (Time_related.strip())
+print ('* Distance-related maintenance coming soon...')
+print (Distance_related.strip())
+print ('* Write-off coming soon...')
+print (Write_off.strip())
